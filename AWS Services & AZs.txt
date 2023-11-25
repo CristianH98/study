@@ -1,0 +1,92 @@
+IAM - global
+
+security groups locked to a region/vpc
+
+
+EC2 Storage
+	-EBS-locked to AZ, snapshot(create a vol within region or copy to move in another region or AZ)
+	-AMI:locked to a region, can be copied across regions
+	-ebs io family can be attached to multiple ec2 instances in the same AZ
+	-Encryption:unencrypted snaps can be encrypted by copying
+	-EFS:works with ec2 instances in multi-az
+	-EFS:can be Regional(multi az) or one z
+
+
+High Availability
+	-High av means running the app in at least 2 AZs
+	-Load Balancer: health check done on an endpoint(/health)
+	-ALB:locked to Region scope(you choose the AZs u want from the same region
+	-NLB:one static IP per AZ
+	- ASG locked to region scope
+
+
+RDS
+  -when creating a db in rds it is region scoped(region you are currently in)
+  - DB is autoscaled when free storage is short
+
+Read Replicas
+  - Read replicas:up to 5 rr: within AZ, cross AZ or cross Region, replication is async, replicas can be promoted to their own db
+  - applications must update connection string for read replicas
+  - snapshots can be copied in any region
+
+RDS Multi AZ(Disaster Recovery)
+  -sync replication, one dns name, read replics can be setup as multi az for recovery, automatic failover
+  - to create standby instance, click modify, a snap is taken, db restored from that snap in a new AZ, sync in process
+  
+  if master not encrypted, read repl cannot be encrypted
+  encrypt must be at launch time
+  to encrypt unencryped rdb db: create a snap,copy snap and enable ecrypt, restore db from that snap
+  rds security: security groups, IAM Policies, authentication, IAM based auth with token(just for mysql and postgres)
+
+Aurora(for mysql and postgres)
+default 6 copies across 3 AZ. When you write something is automatically stored in these 6 db's. One is master
+up to 15 aurora read replicas
+only master writes, if it is failed, automatic failover and other read replica becomes master
+can create after launch a read replica in another region, can add auto scaling policy based on read replicas target usage
+after launch we can add another region to make the db cluster more global but requires a specific size type
+
+aurora serveless - automatic scaling based on actual usage through proxy fleet managed by aurora
+
+aurora multi master option - every copy in aurora cluster can do write/read
+  
+aurora global : 1 primary region and up to 5 secondary read only regions, if primary region fails another region replica will be promoted master
+
+ElastiCache
+- for Redis and Memcached
+- good to load off of databases for read workloads, queries are cached to not read everytime from a relational db
+- Redis is multi az with auto failover, like RDS, has read replicas, backup,
+- memcached has no replicas, no backup, suuucks
+- does not support iam auth, we have redis auth, memcach has sasl based auth-idk wtf that is
+- Redis sorted sets: guarantees uniqueness, element ordering, good for leaderboards
+
+S3
+-Buckets defined at region lvl
+- object max size:5TB, u cannot upload 5b at once, must do multi part upload
+- for replication we need versioning enabled: we can replicate across Region or in another Region
+- only versioned objects are replicated, all of them can be replicated with s3 batch replication
+
+Athena
+-serverless query service to perform analytics on s3 obj
+-exam tip:analyze data in s3 using serverless sql => Athena
+
+ClountFront
+- Edge locations used to cache content from a far away bucket for reading performance, it is like a middleman between client and bucket
+- Fat american wants bucket from Australia, nearest edge location caches the content from bucket and talks to the guy
+- used on : S3 bucket, custom http(ec2 instance, alb, s3 website)
+- it is global, access bucket with OAI(an identity) + bucket policy should allow that OAI
+
+ECS cluster is region scoped, in the subnets the ecs tasks are deployed
+
+Lambda limits per region
+memory alloc:128mb - 10gb
+max exec time:15 min or 900 sec
+env variables:4kb
+disk capacity in the function container 512 mb
+concurrency exec:1000
+ 
+
+DynamoDB:
+-replication multi az
+- global table, anywhere you can do read/write but dynamodb streams must be enabled
+-indexes:allow us to query on attributes other than primary
+-transactions: once enabled u either write to both tables at once or non
